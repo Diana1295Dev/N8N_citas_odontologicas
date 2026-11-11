@@ -7,7 +7,7 @@ export default function Pie() {
       <div className="pie-grid">
         <div className="pie-marca">
           <a className="marca" href="#/"><Logo /><span className="marca-texto"><span className="marca-nombre">{CLINICA}</span><span className="marca-lema">Ortodoncia Tunja</span></span></a>
-          <p>Ortodoncia con la {PROFESIONAL}. Agenda tu cita en línea, cuando quieras.</p>
+          <p>Ortodoncia con {PROFESIONAL}. Agenda tu cita en línea, cuando quieras.</p>
         </div>
         <div>
           <h2 className="pie-titulo">Pacientes</h2>

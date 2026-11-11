@@ -51,7 +51,7 @@ Para poner las credenciales reales: `npm run clave-asistente -- <identificacion>
 ```json
 {
   "semana_inicio": "2026-11-02", "semana_fin": "2026-11-07",
-  "profesional": "Dra. Camila Restrepo", "duracion_min": 45,
+  "profesional": "Nombre de la profesional en ortodoncia", "duracion_min": 45,
   "dias": [ { "fecha": "2026-11-02", "slots": [] }, { "fecha": "2026-11-03", "slots": ["08:00", "08:30"] } ]
 }
 ```

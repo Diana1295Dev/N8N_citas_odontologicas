@@ -21,7 +21,7 @@ export function crearICS({ titulo, descripcion, ubicacion, fecha, hora, duracion
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Patricia Rojas//Citas//ES',
+    'PRODID:-//Nombre del consultorio//Citas//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

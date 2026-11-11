@@ -171,7 +171,7 @@ export default function Inicio() {
               , con la atención que mereces
             </h1>
             <p className="hero-sub">
-              Consulta de ortodoncia con la {PROFESIONAL}. Revisa la agenda real y reserva tu cita en línea, en menos de un minuto.
+              Consulta de ortodoncia con {PROFESIONAL}. Revisa la agenda real y reserva tu cita en línea, en menos de un minuto.
             </p>
             <div className="hero-acciones">
               <a className="btn primario btn-grande magnetico" href="#/paciente">Agendar cita <Icono d={I.flecha} /></a>

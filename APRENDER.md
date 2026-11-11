@@ -66,7 +66,7 @@ Nombres en n8n: carpeta `CITAS_ODONTOLOGICAS`, workflow `AGENDAR_CITA`. Usa el m
 ```json
 { "nombre": "Ana Pérez", "telefono": "3001234567", "email": "ana@correo.com",
   "servicio": "ortodoncia", "fecha": "2026-11-03", "hora": "09:00",
-  "duracion_min": 45, "profesional": "Dra. Camila Restrepo",
+  "duracion_min": 45, "profesional": "Nombre de la profesional en ortodoncia",
   "semana_inicio": "2026-11-02", "website": "", "enviado_en": "..." }
 ```
 
