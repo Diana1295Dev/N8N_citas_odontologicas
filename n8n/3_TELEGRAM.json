@@ -313,7 +313,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Interpretar').first().json.chatId }}",
-        "text": "=🦷 <b>Patricia Rojas</b> · <i>Ortodoncia Tunja</i>\n\n¡Hola, <b>{{ $('Conectar chat').first().json.nombre.split(' ')[0] }}</b>! 👋\nTu cita quedó reservada:\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($('Conectar chat').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Conectar chat').first().json.duracion_min }} min\n✨ {{ $('Conectar chat').first().json.servicio_nombre }}\n👩‍⚕️ {{ $('Conectar chat').first().json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n¿Nos confirmas tu asistencia?",
+        "text": "=🦷 <b>Nombre del consultorio</b> · <i>Ortodoncia Tunja</i>\n\n¡Hola, <b>{{ $('Conectar chat').first().json.nombre.split(' ')[0] }}</b>! 👋\nTu cita quedó reservada:\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($('Conectar chat').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Conectar chat').first().json.duracion_min }} min\n✨ {{ $('Conectar chat').first().json.servicio_nombre }}\n👩‍⚕️ {{ $('Conectar chat').first().json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n¿Nos confirmas tu asistencia?",
         "replyMarkup": "inlineKeyboard",
         "inlineKeyboard": {
           "rows": [
@@ -1186,7 +1186,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Interpretar').first().json.chatId }}",
-        "text": "=🦷 <b>Patricia Rojas</b> · <i>Ortodoncia Tunja</i>\n\n👋 ¡Hola! Soy el asistente de citas.\n\nPor aquí te <b>confirmo tu cita</b>, te <b>recuerdo 3 días antes</b> y puedes <b>cambiarla o cancelarla</b> con un toque.\n\nPara empezar, agenda en línea y al final toca <b>«Recibir confirmación por Telegram»</b> 👇",
+        "text": "=🦷 <b>Nombre del consultorio</b> · <i>Ortodoncia Tunja</i>\n\n👋 ¡Hola! Soy el asistente de citas.\n\nPor aquí te <b>confirmo tu cita</b>, te <b>recuerdo 3 días antes</b> y puedes <b>cambiarla o cancelarla</b> con un toque.\n\nPara empezar, agenda en línea y al final toca <b>«Recibir confirmación por Telegram»</b> 👇",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false,

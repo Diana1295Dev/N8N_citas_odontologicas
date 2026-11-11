@@ -248,7 +248,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ ok: true, id: $('Limpiar datos').item.json.id, fecha: $('Limpiar datos').item.json.fecha, hora: $('Limpiar datos').item.json.hora }) }}",
+        "responseBody": "={{ JSON.stringify({ ok: true, id: $('Limpiar datos').first().json.id, fecha: $('Limpiar datos').first().json.fecha, hora: $('Limpiar datos').first().json.hora, telegram: Boolean($('Conectar Telegram').first().json.telegram_chat) }) }}",
         "options": {
           "responseCode": 200
         }
@@ -258,7 +258,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        2080,
+        2520,
         220
       ]
     },
@@ -308,7 +308,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1860,
+        2300,
         220
       ],
       "credentials": {
@@ -410,7 +410,7 @@
             {
               "id": "p-Telegram",
               "name": "Telegram",
-              "value": "",
+              "value": "={{ $('Conectar Telegram').first().json.telegram_chat || '' }}",
               "type": "string"
             },
             {
@@ -434,7 +434,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1640,
+        2080,
         220
       ]
     },
@@ -592,6 +592,123 @@
         660,
         1800
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=update citas c set telegram_chat = (\n  select o.telegram_chat from citas o\n  where o.telefono = '{{ $('Limpiar datos').first().json.telefono }}' and o.telegram_chat is not null and o.id <> c.id\n  order by o.creada_en desc limit 1\n)\nwhere c.id = '{{ $('Limpiar datos').first().json.id }}'\nreturning c.id, c.nombre, c.servicio_nombre, c.profesional, c.duracion_min, c.telegram_chat,\n  to_char(c.fecha, 'YYYY-MM-DD') as fecha, to_char(c.hora, 'HH24:MI') as hora;",
+        "options": {}
+      },
+      "id": "d4e5f6a7-0301-4000-8000-000000000000",
+      "name": "Conectar Telegram",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1620,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "tg1",
+              "leftValue": "={{ $('Conectar Telegram').first().json.telegram_chat }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-0302-4000-8000-000000000000",
+      "name": "¿Ya tiene Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Conectar Telegram').first().json.telegram_chat }}",
+        "text": "=🦷 <b>Nombre del consultorio</b> · <i>Ortodoncia Tunja</i>\n\n¡Hola, <b>{{ $('Conectar Telegram').first().json.nombre.split(' ')[0] }}</b>! 👋\nRecibimos tu nueva cita:\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($('Conectar Telegram').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Conectar Telegram').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($('Conectar Telegram').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Conectar Telegram').first().json.duracion_min }} min\n✨ {{ $('Conectar Telegram').first().json.servicio_nombre }}\n👩‍⚕️ {{ $('Conectar Telegram').first().json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n¿Nos confirmas tu asistencia?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $('Conectar Telegram').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📅 Cambiar fecha",
+                    "additionalFields": {
+                      "callback_data": "=m|{{ $('Conectar Telegram').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $('Conectar Telegram').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "d4e5f6a7-0303-4000-8000-000000000000",
+      "name": "Enviar confirmación por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2060,
+        100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -701,7 +818,7 @@
       "main": [
         [
           {
-            "node": "Preparar fila",
+            "node": "Conectar Telegram",
             "type": "main",
             "index": 0
           }
@@ -742,6 +859,46 @@
         [
           {
             "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conectar Telegram": {
+      "main": [
+        [
+          {
+            "node": "¿Ya tiene Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya tiene Telegram?": {
+      "main": [
+        [
+          {
+            "node": "Enviar confirmación por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar confirmación por Telegram": {
+      "main": [
+        [
+          {
+            "node": "Preparar fila",
             "type": "main",
             "index": 0
           }

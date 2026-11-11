@@ -85,7 +85,7 @@ export default function Paciente() {
           enviado_en: new Date().toISOString(),
         });
       } // con la trampa llena se finge éxito sin enviar nada
-      setExito({ servicio, fecha, hora, email: datos.email.trim(), id: respuesta?.id || null });
+      setExito({ servicio, fecha, hora, email: datos.email.trim(), id: respuesta?.id || null, telegram: Boolean(respuesta?.telegram) });
       limpiarCache();
     } catch (e) {
       if (e.codigo === 'slot_taken') {
