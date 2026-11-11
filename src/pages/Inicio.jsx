@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { irASeccion } from '../components/Cabecera.jsx';
 import Aurora from '../components/Aurora.jsx';
 import LupaSonrisa from '../components/LupaSonrisa.jsx';
-import { ANTICIPACION_MIN, CLINICA, DIRECCION, PROFESIONAL, SEMANAS_MAX, SERVICIOS, TELEGRAM_BOT } from '../config.js';
+import { ANTICIPACION_MIN, CLINICA, DIRECCION, PROFESIONAL, SEMANAS_MAX, SERVICIOS } from '../config.js';
 import { cargarSemana } from '../hooks/semanas.js';
 import { useAparecer, useArrastre, useDistancia, useInclinar3D, useMagnetico, useParallax, useProgreso } from '../hooks/movimiento.js';
 import { addDays, ahoraBogota, fechaLarga, hora12, rangoSemanas } from '../lib/fechas.js';
@@ -340,56 +340,6 @@ export default function Inicio() {
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      {/* ---------- Escanéame: QR de la app y del bot de Telegram ---------- */}
-      <section className="escaneame" aria-labelledby="t-escaneame">
-        <span className="escaneame-brillo b1" aria-hidden="true">✦</span>
-        <span className="escaneame-brillo b2" aria-hidden="true">✦</span>
-        <span className="escaneame-brillo b3" aria-hidden="true">✦</span>
-        <div className="seccion">
-          <div className="seccion-cab aparecer">
-            <span className="escaneame-diente" aria-hidden="true">
-              <svg viewBox="0 0 64 64" width="44" height="44"><path d="M20 8c-8 0-13 6-13 15 0 8 4 13 6 21 2 9 4 13 8 13s5-5 6-11c1-4 2-6 5-6s4 2 5 6c1 6 2 11 6 11s6-4 8-13c2-8 6-13 6-21 0-9-5-15-13-15-5 0-8 3-12 3S25 8 20 8z" fill="#fff" /><circle cx="25" cy="27" r="2.6" fill="#10263a" /><circle cx="39" cy="27" r="2.6" fill="#10263a" /><path d="M26 34c3 3.5 9 3.5 12 0" fill="none" stroke="#10263a" strokeWidth="2.4" strokeLinecap="round" /></svg>
-            </span>
-            <p className="eyebrow">{CLINICA} · desde tu celular</p>
-            <h2 id="t-escaneame" className="seccion-titulo">¡Escanéame! <em>Agenda en dos pasos</em></h2>
-            <p className="seccion-sub">Apunta la cámara de tu celular al código. Si ya estás en el celular, toca el botón.</p>
-          </div>
-          <div className="qr-pasos">
-            <article className="qr-card aparecer" style={{ '--d': '0ms' }}>
-              <img className="qr-img" src={`${IMG}qr-app.svg`} alt="Código QR para abrir la app de citas" width="168" height="168" loading="lazy" />
-              <div className="qr-info">
-                <div className="qr-cab">
-                  <span className="qr-n">1</span>
-                  <span className="qr-ico" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3v4M17 3v4M3.5 10h17M5.5 5h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM9 15l2 2 4-4" /></svg>
-                  </span>
-                </div>
-                <h3>Agenda tu cita</h3>
-                <p>Elige el servicio, el día y la hora que prefieras. Las horas que ves son las libres de verdad.</p>
-                <a className="qr-boton" href="#/paciente">Agendar ahora</a>
-              </div>
-            </article>
-            {TELEGRAM_BOT && (
-              <article className="qr-card aparecer" style={{ '--d': '140ms' }}>
-                <img className="qr-img" src={`${IMG}qr-telegram.svg`} alt="Código QR para abrir el bot de Telegram" width="168" height="168" loading="lazy" />
-                <div className="qr-info">
-                  <div className="qr-cab">
-                    <span className="qr-n">2</span>
-                    <span className="qr-ico" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" /></svg>
-                    </span>
-                  </div>
-                  <h3>Activa Telegram</h3>
-                  <p>Recibe la confirmación y un recordatorio 3 días antes. Desde ahí también puedes cambiar o cancelar tu cita.</p>
-                  <a className="qr-boton tg" href={`https://t.me/${TELEGRAM_BOT}`} target="_blank" rel="noreferrer">Abrir en Telegram</a>
-                </div>
-              </article>
-            )}
-          </div>
-          <p className="escaneame-pie aparecer">Tu sonrisa empieza con una cita 💙</p>
         </div>
       </section>
 
