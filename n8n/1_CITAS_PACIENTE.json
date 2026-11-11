@@ -1,0 +1,757 @@
+{
+  "name": "1_CITAS_PACIENTE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agendar-cita",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "agendar-cita"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c-bot-1",
+              "leftValue": "={{ $json.body.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "¿Es un bot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": true\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Ignorar bot (responde OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sid",
+              "name": "id",
+              "value": "={{ 'C' + $now.setZone('America/Bogota').toFormat('MMdd') + Math.random().toString(36).slice(2, 6).toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "s0",
+              "name": "registrado_en",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            },
+            {
+              "id": "s1",
+              "name": "nombre",
+              "value": "={{ String($json.body.nombre || '').trim().replace(/\\s+/g, ' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "telefono",
+              "value": "={{ String($json.body.telefono || '').replace(/\\D/g, '').replace(/^57(?=3\\d{9}$)/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "email",
+              "value": "={{ String($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "notas",
+              "value": "={{ String($json.body.notas || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "servicio",
+              "value": "={{ $json.body.servicio }}",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "servicio_nombre",
+              "value": "={{ $json.body.servicio_nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "fecha",
+              "value": "={{ $json.body.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "s8",
+              "name": "hora",
+              "value": "={{ $json.body.hora }}",
+              "type": "string"
+            },
+            {
+              "id": "s9",
+              "name": "duracion_min",
+              "value": "={{ Number($json.body.duracion_min) || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "s10",
+              "name": "profesional",
+              "value": "={{ $json.body.profesional }}",
+              "type": "string"
+            },
+            {
+              "id": "s11",
+              "name": "semana_inicio",
+              "value": "={{ $json.body.semana_inicio }}",
+              "type": "string"
+            },
+            {
+              "id": "s12",
+              "name": "enviado_en",
+              "value": "={{ $json.body.enviado_en }}",
+              "type": "string"
+            },
+            {
+              "id": "s13",
+              "name": "estado",
+              "value": "Confirmada",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Limpiar datos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.nombre.length }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "v2",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "v3",
+              "leftValue": "={{ $json.telefono }}",
+              "rightValue": "^3\\d{9}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "v4",
+              "leftValue": "={{ $json.fecha }}",
+              "rightValue": "^\\d{4}-\\d{2}-\\d{2}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "v5",
+              "leftValue": "={{ $json.hora }}",
+              "rightValue": "^\\d{2}:\\d{2}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "¿Datos válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, id: $('Limpiar datos').item.json.id, fecha: $('Limpiar datos').item.json.fecha, hora: $('Limpiar datos').item.json.hora }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"datos_invalidos\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Responder 400 (datos inválidos)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Guardar en Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1860,
+        220
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p0",
+              "name": "Registrado el",
+              "value": "={{ $now.setZone('America/Bogota').setLocale('es').toFormat('dd/LL/yyyy h:mm a') }}",
+              "type": "string"
+            },
+            {
+              "id": "p1",
+              "name": "Paciente",
+              "value": "={{ $('Limpiar datos').item.json.nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "p2",
+              "name": "Celular",
+              "value": "={{ $('Limpiar datos').item.json.telefono.replace(/(\\d{3})(\\d{3})(\\d{4})/, '$1 $2 $3') }}",
+              "type": "string"
+            },
+            {
+              "id": "p3",
+              "name": "Correo",
+              "value": "={{ $('Limpiar datos').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "p4",
+              "name": "Servicio",
+              "value": "={{ $('Limpiar datos').item.json.servicio_nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "p5",
+              "name": "Fecha de la cita",
+              "value": "={{ DateTime.fromISO($('Limpiar datos').item.json.fecha).setLocale('es').toFormat(\"cccc, d 'de' LLLL 'de' yyyy\") }}",
+              "type": "string"
+            },
+            {
+              "id": "p6",
+              "name": "Hora",
+              "value": "={{ DateTime.fromFormat($('Limpiar datos').item.json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }}",
+              "type": "string"
+            },
+            {
+              "id": "p7",
+              "name": "Duración",
+              "value": "={{ $('Limpiar datos').item.json.duracion_min + ' min' }}",
+              "type": "string"
+            },
+            {
+              "id": "p8",
+              "name": "Profesional",
+              "value": "={{ $('Limpiar datos').item.json.profesional }}",
+              "type": "string"
+            },
+            {
+              "id": "p9",
+              "name": "Notas",
+              "value": "={{ $('Limpiar datos').item.json.notas }}",
+              "type": "string"
+            },
+            {
+              "id": "p10",
+              "name": "Estado",
+              "value": "={{ $('Limpiar datos').item.json.estado }}",
+              "type": "string"
+            },
+            {
+              "id": "p-ID",
+              "name": "ID",
+              "value": "={{ $('Limpiar datos').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "p-Fecha (AAAA-MM-DD)",
+              "name": "Fecha (AAAA-MM-DD)",
+              "value": "={{ $('Limpiar datos').item.json.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "p-Hora (24h)",
+              "name": "Hora (24h)",
+              "value": "={{ $('Limpiar datos').item.json.hora }}",
+              "type": "string"
+            },
+            {
+              "id": "p-Telegram",
+              "name": "Telegram",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "p-Cambios",
+              "name": "Cambios",
+              "value": "0",
+              "type": "string"
+            },
+            {
+              "id": "p-Recordatorio",
+              "name": "Recordatorio",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Preparar fila",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1640,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// INSERT con candado: no guarda si la hora se cruza con otra cita activa de la misma doctora\nconst lit = (v) => (v === null || v === undefined) ? 'null' : \"'\" + String(v).replace(/'/g, \"''\") + \"'\";\nconst num = (v) => { const x = Number(v); if (!Number.isFinite(x)) throw new Error('número inválido'); return String(Math.round(x)); };\nconst c = $input.first().json;\nconst sql = `insert into citas (id, nombre, telefono, email, notas, servicio, servicio_nombre, duracion_min, profesional, fecha, hora)\nselect ${lit(c.id)}, ${lit(c.nombre)}, ${lit(c.telefono)}, ${lit(c.email)}, ${lit(c.notas)}, ${lit(c.servicio)}, ${lit(c.servicio_nombre)},\n       ${num(c.duracion_min)}, ${lit(c.profesional)}, ${lit(c.fecha)}::date, ${lit(c.hora)}::time\nwhere not exists (\n  select 1 from citas o\n  where o.estado <> 'Cancelada' and o.profesional = ${lit(c.profesional)} and o.fecha = ${lit(c.fecha)}::date\n    and o.hora < ${lit(c.hora)}::time + make_interval(mins => ${num(c.duracion_min)})\n    and ${lit(c.hora)}::time < o.hora + make_interval(mins => o.duracion_min)\n)\non conflict do nothing\nreturning id;`;\nreturn [{ json: { sql } }];"
+      },
+      "id": "b2c3d4e5-0122-4000-8000-000000000000",
+      "name": "SQL insertar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0123-4000-8000-000000000000",
+      "name": "Guardar en Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1180,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "hl1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0124-4000-8000-000000000000",
+      "name": "¿Hora libre?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"slot_taken\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "id": "b2c3d4e5-0125-4000-8000-000000000000",
+      "name": "Responder 409 (hora ocupada)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1640,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "disponibilidad",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2c3d4e5-0101-4000-8000-000000000000",
+      "name": "GET disponibilidad",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1800
+      ],
+      "webhookId": "disponibilidad-get"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  (select row_to_json(h) from horario h where id = 1) as horario,\n  coalesce((select json_agg(to_char(fecha, 'YYYY-MM-DD') order by fecha) from no_atiende where fecha >= current_date - 7), '[]'::json) as no_atiende,\n  coalesce((select json_agg(json_build_object('fecha', to_char(fecha, 'YYYY-MM-DD'), 'hora', to_char(hora, 'HH24:MI'), 'dur', duracion_min))\n            from citas where estado <> 'Cancelada' and fecha >= current_date - 1), '[]'::json) as citas;",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0102-4000-8000-000000000000",
+      "name": "Leer agenda",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        1800
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Horas libres de una semana (lunes a sábado), con el mismo formato que espera la app\nconst q = $('GET disponibilidad').first().json.query || {};\nconst DUR = { valoracion: 30, limpieza: 30, blanqueamiento: 60, ortodoncia: 45 };\nconst dur = DUR[q.servicio];\nconst r = $input.first().json;\nconst h = r.horario;\nconst noAtiende = new Set(r.no_atiende || []);\nconst ahora = DateTime.now().setZone('America/Bogota');\nconst hoy = ahora.toISODate();\nconst minAhora = ahora.hour * 60 + ahora.minute;\nlet lunes = DateTime.fromISO(String(q.semana || ''), { zone: 'America/Bogota' });\nif (!lunes.isValid || !dur) return [{ json: { error: 'parametros_invalidos' } }];\nlunes = lunes.minus({ days: lunes.weekday - 1 });\n// Ventana de 8 semanas desde la actual (si hoy es domingo, desde el lunes siguiente)\nlet base = ahora.startOf('day');\nif (base.weekday === 7) base = base.plus({ days: 1 });\nbase = base.minus({ days: base.weekday - 1 });\nconst semanas = Math.round(lunes.diff(base, 'days').days / 7);\nconst ofrece = semanas >= 0 && semanas < 8;\nconst periodos = [h.manana_on && [h.manana_ini, h.manana_fin], h.tarde_on && [h.tarde_ini, h.tarde_fin]].filter(Boolean);\nconst ocupado = new Set();\nfor (const c of r.citas || []) {\n  const [hh, mm] = c.hora.split(':').map(Number);\n  for (let t = hh * 60 + mm; t < hh * 60 + mm + c.dur; t += 30) ocupado.add(c.fecha + ' ' + t);\n}\nconst hhmm = (t) => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');\nconst dias = [];\nfor (let i = 0; i < 6; i++) {\n  const fecha = lunes.plus({ days: i }).toISODate();\n  if (fecha < hoy) { dias.push({ fecha, slots: [], motivo: 'pasado' }); continue; }\n  if (!ofrece || !(h.dias || []).includes(i) || noAtiende.has(fecha)) { dias.push({ fecha, slots: [], motivo: 'no_atiende' }); continue; }\n  const libres = new Set();\n  for (const [a, b] of periodos) for (let t = a; t < b; t += 30) if (!ocupado.has(fecha + ' ' + t)) libres.add(t);\n  const caben = [...libres].filter((t) => { for (let k = t; k < t + dur; k += 30) if (!libres.has(k)) return false; return true; }).sort((a, b) => a - b);\n  const desde = fecha === hoy ? minAhora + 60 : -1;\n  const slots = caben.filter((t) => t >= desde).map(hhmm);\n  dias.push(slots.length ? { fecha, slots } : { fecha, slots: [], motivo: caben.length && fecha === hoy ? 'pasado' : 'sin_cupo' });\n}\nreturn [{ json: { semana_inicio: lunes.toISODate(), semana_fin: lunes.plus({ days: 5 }).toISODate(), profesional: 'Dra. Camila Restrepo', duracion_min: dur, dias } }];"
+      },
+      "id": "b2c3d4e5-0103-4000-8000-000000000000",
+      "name": "Calcular semana",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.error ? 400 : 200 }}"
+        }
+      },
+      "id": "b2c3d4e5-0104-4000-8000-000000000000",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        1800
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "¿Es un bot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es un bot?": {
+      "main": [
+        [
+          {
+            "node": "Ignorar bot (responde OK)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpiar datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar datos": {
+      "main": [
+        [
+          {
+            "node": "¿Datos válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Datos válidos?": {
+      "main": [
+        [
+          {
+            "node": "SQL insertar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 400 (datos inválidos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar fila": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL insertar": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Neon": {
+      "main": [
+        [
+          {
+            "node": "¿Hora libre?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hora libre?": {
+      "main": [
+        [
+          {
+            "node": "Preparar fila",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 409 (hora ocupada)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET disponibilidad": {
+      "main": [
+        [
+          {
+            "node": "Leer agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer agenda": {
+      "main": [
+        [
+          {
+            "node": "Calcular semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular semana": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "pinData": {}
+}

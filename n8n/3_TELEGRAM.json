@@ -1,0 +1,1740 @@
+{
+  "name": "3_TELEGRAM",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "c3d4e5f6-0201-4000-8000-000000000000",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        600
+      ],
+      "webhookId": "telegram-citas",
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte el mensaje o el botón de Telegram en una acción y arma su SQL\nconst lit = (v) => (v === null || v === undefined) ? 'null' : \"'\" + String(v).replace(/'/g, \"''\") + \"'\";\nconst u = $input.first().json;\nconst out = { tipo: 'otro', chatId: '', id: '', nombre: '', sql: '' };\nif (u.callback_query) {\n  const q = u.callback_query;\n  const [accion, idCita, fecha, hora] = String(q.data || '').split('|');\n  Object.assign(out, { chatId: String(q.message.chat.id), queryId: q.id, id: idCita || '', nombre: q.from.first_name || '' });\n  out.tipo = { c: 'confirmar', x: 'cancelar', m: 'cambiar', h: 'elegir' }[accion] || 'otro';\n  if (out.tipo === 'elegir') {\n    out.fecha = fecha.slice(0, 4) + '-' + fecha.slice(4, 6) + '-' + fecha.slice(6, 8);\n    out.hora = hora.slice(0, 2) + ':' + hora.slice(2, 4);\n  }\n} else if (u.message) {\n  out.chatId = String(u.message.chat.id);\n  out.nombre = u.message.from.first_name || '';\n  const m = String(u.message.text || '').match(/^\\/start\\s+(\\S+)/);\n  if (m) { out.tipo = 'inicio'; out.id = m[1]; }\n}\nif (!/^[A-Za-z0-9-]{4,20}$/.test(out.id)) out.tipo = 'otro';\nif (out.tipo === 'elegir' && !(/^\\d{4}-\\d{2}-\\d{2}$/.test(out.fecha) && /^\\d{2}:\\d{2}$/.test(out.hora))) out.tipo = 'otro';\nconst ID = lit(out.id);\nconst CHAT = lit(out.chatId);\n// Solo el chat conectado a la cita puede tocarla\nconst suya = 'id = ' + ID + ' and telegram_chat = ' + CHAT + \" and estado <> 'Cancelada'\";\nconst SQL = {\n  inicio: 'update citas set telegram_chat = ' + CHAT + ' where id = ' + ID + \" and estado <> 'Cancelada' returning id, nombre, servicio_nombre, profesional, duracion_min, to_char(fecha, 'YYYY-MM-DD') as fecha, to_char(hora, 'HH24:MI') as hora;\",\n  confirmar: \"update citas set estado = 'Confirmada por paciente' where \" + suya + ' returning id;',\n  cancelar: \"update citas set estado = 'Cancelada' where \" + suya + ' returning id;',\n  cambiar: `select\n  (select row_to_json(h) from horario h where id = 1) as horario,\n  coalesce((select json_agg(to_char(fecha, 'YYYY-MM-DD')) from no_atiende where fecha >= current_date), '[]'::json) as no_atiende,\n  coalesce((select json_agg(json_build_object('id', id, 'fecha', to_char(fecha, 'YYYY-MM-DD'), 'hora', to_char(hora, 'HH24:MI'), 'dur', duracion_min))\n            from citas where estado <> 'Cancelada' and fecha >= current_date), '[]'::json) as citas,\n  (select row_to_json(c) from (select id, cambios, duracion_min from citas where ${suya}) c) as cita;`,\n  elegir: `update citas c set fecha = ${lit(out.fecha)}::date, hora = ${lit(out.hora)}::time, cambios = c.cambios + 1, estado = 'Reprogramada', recordatorio_enviado = null\nwhere c.id = ${ID} and c.telegram_chat = ${CHAT} and c.estado <> 'Cancelada' and c.cambios < 1\n  and ${lit(out.fecha)}::date > (now() at time zone 'America/Bogota')::date\n  and not exists (\n    select 1 from citas o\n    where o.id <> c.id and o.estado <> 'Cancelada' and o.profesional = c.profesional and o.fecha = ${lit(out.fecha)}::date\n      and o.hora < ${lit(out.hora)}::time + make_interval(mins => c.duracion_min)\n      and ${lit(out.hora)}::time < o.hora + make_interval(mins => o.duracion_min)\n  )\nreturning c.id, c.nombre, c.servicio_nombre, c.profesional, c.duracion_min, to_char(c.fecha, 'YYYY-MM-DD') as fecha, to_char(c.hora, 'HH24:MI') as hora;`,\n};\nout.sql = SQL[out.tipo] || '';\nreturn [{ json: out }];"
+      },
+      "id": "c3d4e5f6-0202-4000-8000-000000000000",
+      "name": "Interpretar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-inicio",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "inicio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "inicio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-confirmar",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "confirmar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirmar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-cancelar",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "cancelar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancelar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-cambiar",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "cambiar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cambiar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-elegir",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "elegir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "elegir"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "t-otro",
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "otro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "otro"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0203-4000-8000-000000000000",
+      "name": "¿Qué hizo?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Interpretar').first().json.sql }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0204-4000-8000-000000000000",
+      "name": "Conectar chat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        700,
+        120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "¿Existe la cita?-1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0205-4000-8000-000000000000",
+      "name": "¿Existe la cita?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        920,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Conectar chat').first().json.id }}",
+            "Telegram": "={{ $('Interpretar').first().json.chatId }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram",
+              "displayName": "Telegram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0206-4000-8000-000000000000",
+      "name": "Respaldo: chat",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1140,
+        60
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=🦷 <b>Patricia Rojas</b> · <i>Ortodoncia Tunja</i>\n\n¡Hola, <b>{{ $('Conectar chat').first().json.nombre.split(' ')[0] }}</b>! 👋\nTu cita quedó reservada:\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Conectar chat').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($('Conectar chat').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Conectar chat').first().json.duracion_min }} min\n✨ {{ $('Conectar chat').first().json.servicio_nombre }}\n👩‍⚕️ {{ $('Conectar chat').first().json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n¿Nos confirmas tu asistencia?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $('Conectar chat').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📅 Cambiar fecha",
+                    "additionalFields": {
+                      "callback_data": "=m|{{ $('Conectar chat').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $('Conectar chat').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0207-4000-8000-000000000000",
+      "name": "Enviar confirmación",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        60
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Interpretar').first().json.queryId }}",
+        "additionalFields": {
+          "text": "✅ ¡Cita confirmada!"
+        }
+      },
+      "id": "c3d4e5f6-0208-4000-8000-000000000000",
+      "name": "Aviso: confirmada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Interpretar').first().json.sql }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0209-4000-8000-000000000000",
+      "name": "Confirmar en Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        340
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Interpretar').first().json.id }}",
+            "Estado": "Confirmada por paciente"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0210-4000-8000-000000000000",
+      "name": "Respaldo: confirmada",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1140,
+        340
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=✅ <b>¡Asistencia confirmada!</b>\n\nGracias, {{ $('Interpretar').first().json.nombre }}. Te esperamos 💚\n\n<i>Te recomendamos llegar 10 minutos antes. Tres días antes te enviaremos un recordatorio por aquí.</i>",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0211-4000-8000-000000000000",
+      "name": "Mensaje: confirmada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Interpretar').first().json.queryId }}",
+        "additionalFields": {
+          "text": "Cita cancelada"
+        }
+      },
+      "id": "c3d4e5f6-0212-4000-8000-000000000000",
+      "name": "Aviso: cancelada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        540
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Interpretar').first().json.sql }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0213-4000-8000-000000000000",
+      "name": "Cancelar en Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        540
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Interpretar').first().json.id }}",
+            "Estado": "Cancelada"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0214-4000-8000-000000000000",
+      "name": "Respaldo: cancelada",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1140,
+        540
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=❌ <b>Tu cita fue cancelada</b>\n\nEsa hora quedó libre para otra paciente.\nCuando quieras volver, puedes agendar de nuevo en línea 👇",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📅 Agendar una nueva cita",
+                    "additionalFields": {
+                      "url": "https://claude.ai/artifact/JoYPSxKAPxtfLiMJFLzb6D"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "c3d4e5f6-0215-4000-8000-000000000000",
+      "name": "Mensaje: cancelada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        540
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Interpretar').first().json.queryId }}",
+        "additionalFields": {
+          "text": "🔎 Buscando horas libres…"
+        }
+      },
+      "id": "c3d4e5f6-0216-4000-8000-000000000000",
+      "name": "Aviso: buscando horas",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        760
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Interpretar').first().json.sql }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0217-4000-8000-000000000000",
+      "name": "Leer agenda",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        760
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Próximas horas libres (máximo 2 por día) con el horario y las citas reales de la app\nconst r = $input.first().json;\nconst e = $('Interpretar').first().json;\nconst cita = r.cita;\nconst out = { id: e.id, chatId: e.chatId, puede: Boolean(cita) && Number(cita.cambios) < 1 };\nif (!out.puede) return [{ json: out }];\nconst h = r.horario;\nconst dur = Number(cita.duracion_min) || 30;\nconst noAtiende = new Set(r.no_atiende || []);\nconst periodos = [h.manana_on && [h.manana_ini, h.manana_fin], h.tarde_on && [h.tarde_ini, h.tarde_fin]].filter(Boolean);\nconst ocupado = new Set();\nfor (const c of r.citas || []) {\n  if (c.id === cita.id) continue;\n  const [hh, mm] = c.hora.split(':').map(Number);\n  for (let t = hh * 60 + mm; t < hh * 60 + mm + c.dur; t += 30) ocupado.add(c.fecha + ' ' + t);\n}\nconst hoy = DateTime.now().setZone('America/Bogota').startOf('day');\nconst libres = [];\nfor (let i = 1; i <= 56 && libres.length < 6; i++) {\n  const dia = hoy.plus({ days: i });\n  const fecha = dia.toISODate();\n  // En la base los días van de 0 = lunes a 5 = sábado\n  if (dia.weekday === 7 || !(h.dias || []).includes(dia.weekday - 1) || noAtiende.has(fecha)) continue;\n  let delDia = 0;\n  for (const [a, b] of periodos) {\n    for (let t = a; t + dur <= b && delDia < 2 && libres.length < 6; t += 30) {\n      let libre = true;\n      for (let k = t; k < t + dur; k += 30) if (ocupado.has(fecha + ' ' + k)) libre = false;\n      if (libre) { libres.push({ dia, t }); delDia++; t += 90; }\n    }\n  }\n}\nout.hay = libres.length > 0;\nfor (let i = 0; i < 6; i++) {\n  const s = libres[i];\n  if (s) {\n    const hhmm = String(Math.floor(s.t / 60)).padStart(2, '0') + String(s.t % 60).padStart(2, '0');\n    const hora = DateTime.fromObject({ hour: Math.floor(s.t / 60), minute: s.t % 60 }).setLocale('es').toFormat('h:mm a');\n    const dia = s.dia.setLocale('es').toFormat('ccc d LLL').replace('.', '');\n    out['texto' + (i + 1)] = dia.charAt(0).toUpperCase() + dia.slice(1) + ' · ' + hora;\n    out['dato' + (i + 1)] = 'h|' + cita.id + '|' + s.dia.toFormat('yyyyMMdd') + '|' + hhmm;\n  } else {\n    out['texto' + (i + 1)] = '—';\n    out['dato' + (i + 1)] = 'n|' + cita.id;\n  }\n}\nreturn [{ json: out }];"
+      },
+      "id": "c3d4e5f6-0218-4000-8000-000000000000",
+      "name": "Horas libres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "¿Puede cambiar?-1",
+              "leftValue": "={{ $json.puede && $json.hay }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0219-4000-8000-000000000000",
+      "name": "¿Puede cambiar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=📅 <b>Elige tu nueva fecha</b>\n\nEstas son las horas disponibles más próximas. Toca la que prefieras 👇\n\n<i>⚠️ Solo puedes cambiar tu cita una vez.</i>",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.texto1 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato1 }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.texto2 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato2 }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.texto3 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato3 }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.texto4 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato4 }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.texto5 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato5 }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.texto6 }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.dato6 }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "↩️ Mejor conservo mi cita",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0220-4000-8000-000000000000",
+      "name": "Ofrecer horas",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        700
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "={{ $json.puede ? '📭 <b>Por ahora no hay horas libres</b>\\n\\nNo encontramos otra hora disponible en las próximas semanas. Tu cita actual sigue en pie.\\n\\n¿Qué quieres hacer?' : '🔒 <b>Ya usaste tu cambio de fecha</b>\\n\\nCada cita se puede cambiar una sola vez. Tu cita actual sigue en pie.\\n\\n¿Qué quieres hacer?' }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $('Interpretar').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $('Interpretar').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0221-4000-8000-000000000000",
+      "name": "Mensaje: sin cambio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        860
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Interpretar').first().json.queryId }}",
+        "additionalFields": {
+          "text": "⏳ Guardando tu nueva fecha…"
+        }
+      },
+      "id": "c3d4e5f6-0222-4000-8000-000000000000",
+      "name": "Aviso: cambiando",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        1000
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Interpretar').first().json.sql }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0223-4000-8000-000000000000",
+      "name": "Guardar nueva fecha",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        1000
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "¿Se pudo cambiar?-1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0224-4000-8000-000000000000",
+      "name": "¿Se pudo cambiar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Guardar nueva fecha').first().json.id }}",
+            "Fecha de la cita": "={{ DateTime.fromISO($('Guardar nueva fecha').first().json.fecha).setLocale('es').toFormat(\"cccc, d 'de' LLLL 'de' yyyy\") }}",
+            "Hora": "={{ DateTime.fromFormat($('Guardar nueva fecha').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }}",
+            "Fecha (AAAA-MM-DD)": "={{ $('Guardar nueva fecha').first().json.fecha }}",
+            "Hora (24h)": "={{ $('Guardar nueva fecha').first().json.hora }}",
+            "Cambios": "1",
+            "Estado": "Reprogramada",
+            "Recordatorio": ""
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha de la cita",
+              "displayName": "Fecha de la cita",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hora",
+              "displayName": "Hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha (AAAA-MM-DD)",
+              "displayName": "Fecha (AAAA-MM-DD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hora (24h)",
+              "displayName": "Hora (24h)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cambios",
+              "displayName": "Cambios",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recordatorio",
+              "displayName": "Recordatorio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0225-4000-8000-000000000000",
+      "name": "Respaldo: nueva fecha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        940
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=🎉 <b>¡Listo! Tu cita cambió de fecha</b>\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($('Guardar nueva fecha').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Guardar nueva fecha').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($('Guardar nueva fecha').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Guardar nueva fecha').first().json.duracion_min }} min\n✨ {{ $('Guardar nueva fecha').first().json.servicio_nombre }}\n👩‍⚕️ {{ $('Guardar nueva fecha').first().json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n<i>Este fue tu único cambio de fecha.</i>",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $('Interpretar').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $('Interpretar').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0226-4000-8000-000000000000",
+      "name": "Mensaje: nueva fecha",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        940
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=😕 <b>Esa hora ya no está disponible</b>\n\nAlguien la reservó hace un momento, o ya usaste tu cambio de fecha.\nTu cita actual sigue en pie. ¿Qué quieres hacer?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $('Interpretar').first().json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $('Interpretar').first().json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0227-4000-8000-000000000000",
+      "name": "Mensaje: no se pudo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        1100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar').first().json.chatId }}",
+        "text": "=🦷 <b>Patricia Rojas</b> · <i>Ortodoncia Tunja</i>\n\n👋 ¡Hola! Soy el asistente de citas.\n\nPor aquí te <b>confirmo tu cita</b>, te <b>recuerdo 3 días antes</b> y puedes <b>cambiarla o cancelarla</b> con un toque.\n\nPara empezar, agenda en línea y al final toca <b>«Recibir confirmación por Telegram»</b> 👇",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📅 Agendar mi cita",
+                    "additionalFields": {
+                      "url": "https://claude.ai/artifact/JoYPSxKAPxtfLiMJFLzb6D"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "c3d4e5f6-0228-4000-8000-000000000000",
+      "name": "Mensaje: ayuda",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        1240
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "c3d4e5f6-0229-4000-8000-000000000000",
+      "name": "Todos los días 8:00 a. m.",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select id, nombre, servicio_nombre, profesional, duracion_min, to_char(fecha, 'YYYY-MM-DD') as fecha, to_char(hora, 'HH24:MI') as hora, telegram_chat\nfrom citas\nwhere fecha = (now() at time zone 'America/Bogota')::date + 3\n  and telegram_chat is not null and estado <> 'Cancelada' and recordatorio_enviado is null\norder by hora;",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0230-4000-8000-000000000000",
+      "name": "Citas en 3 días",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        1800
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat }}",
+        "text": "=⏰ <b>¡Tu cita es en 3 días!</b>\n\nHola, <b>{{ $json.nombre.split(' ')[0] }}</b> 👋 Te esperamos:\n\n<blockquote>🗓 <b>{{ DateTime.fromISO($json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(0, 1).toUpperCase() + DateTime.fromISO($json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\").slice(1) }}</b>\n🕗 {{ DateTime.fromFormat($json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $json.duracion_min }} min\n✨ {{ $json.servicio_nombre }}\n👩‍⚕️ {{ $json.profesional }}\n📍 Tunja, Boyacá</blockquote>\n\n¿Sigues con esta fecha?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Sí, asistiré",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📅 Cambiar fecha",
+                    "additionalFields": {
+                      "callback_data": "=m|{{ $json.id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar cita",
+                    "additionalFields": {
+                      "callback_data": "=x|{{ $json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c3d4e5f6-0231-4000-8000-000000000000",
+      "name": "Enviar recordatorio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        1800
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "kAEPl6objre5nVVx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ \"update citas set recordatorio_enviado = now() where id = '\" + String($('Citas en 3 días').item.json.id).replace(/'/g, \"''\") + \"' returning id;\" }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0232-4000-8000-000000000000",
+      "name": "Marcar recordatorio",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        660,
+        1800
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.id }}",
+            "Recordatorio": "={{ 'Enviado ' + $now.setZone('America/Bogota').toFormat('dd/LL/yyyy') }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recordatorio",
+              "displayName": "Recordatorio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-0233-4000-8000-000000000000",
+      "name": "Respaldo: recordatorio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        1800
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Interpretar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar": {
+      "main": [
+        [
+          {
+            "node": "¿Qué hizo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Qué hizo?": {
+      "main": [
+        [
+          {
+            "node": "Conectar chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso: confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso: cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso: buscando horas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso: cambiando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje: ayuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conectar chat": {
+      "main": [
+        [
+          {
+            "node": "¿Existe la cita?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Existe la cita?": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje: ayuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respaldo: chat": {
+      "main": [
+        [
+          {
+            "node": "Enviar confirmación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso: confirmada": {
+      "main": [
+        [
+          {
+            "node": "Confirmar en Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar en Neon": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respaldo: confirmada": {
+      "main": [
+        [
+          {
+            "node": "Mensaje: confirmada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso: cancelada": {
+      "main": [
+        [
+          {
+            "node": "Cancelar en Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancelar en Neon": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respaldo: cancelada": {
+      "main": [
+        [
+          {
+            "node": "Mensaje: cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso: buscando horas": {
+      "main": [
+        [
+          {
+            "node": "Leer agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer agenda": {
+      "main": [
+        [
+          {
+            "node": "Horas libres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Horas libres": {
+      "main": [
+        [
+          {
+            "node": "¿Puede cambiar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Puede cambiar?": {
+      "main": [
+        [
+          {
+            "node": "Ofrecer horas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje: sin cambio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso: cambiando": {
+      "main": [
+        [
+          {
+            "node": "Guardar nueva fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar nueva fecha": {
+      "main": [
+        [
+          {
+            "node": "¿Se pudo cambiar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Se pudo cambiar?": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: nueva fecha",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje: no se pudo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respaldo: nueva fecha": {
+      "main": [
+        [
+          {
+            "node": "Mensaje: nueva fecha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Todos los días 8:00 a. m.": {
+      "main": [
+        [
+          {
+            "node": "Citas en 3 días",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Citas en 3 días": {
+      "main": [
+        [
+          {
+            "node": "Enviar recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Marcar recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "pinData": {}
+}

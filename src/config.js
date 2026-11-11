@@ -3,6 +3,8 @@ export const OFFSET_BOGOTA_H = 5; // Bogotá es UTC-5 todo el año (sin horario 
 
 export const PROFESIONAL = 'Dra. Camila Restrepo';
 export const CLINICA = 'Patricia Rojas';
+// Bot de Telegram para confirmar, recordar y cambiar citas (usuario sin @). Vacío = no se muestra el botón.
+export const TELEGRAM_BOT = (import.meta.env?.VITE_TELEGRAM_BOT || '').replace(/^@/, '');
 export const DIRECCION = 'Tunja, Boyacá'; // poner aquí la dirección exacta del consultorio
 
 export const BLOQUE_MIN = 30; // tamaño de cada bloque de agenda

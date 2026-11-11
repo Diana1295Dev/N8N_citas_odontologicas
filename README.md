@@ -61,3 +61,17 @@ Siempre 6 días (lunes a sábado); `slots: []` si no hay cupo. Opcionalmente, un
 ## Envío de la cita
 
 `POST` a `VITE_WEBHOOK_URL` con `nombre, telefono, email, notas, servicio, servicio_nombre, fecha, hora, duracion_min, profesional, semana_inicio, zona_horaria, website (campo trampa), enviado_en`. Si la hora ya no está libre, responde HTTP `409` o `{ "error": "slot_taken" }`: la app vuelve al paso de fecha, recarga y avisa. Sin `VITE_WEBHOOK_URL` el envío se simula; abre la página con `?slot_taken=1` para ver ese caso.
+
+## Backend: n8n + Neon (Postgres) + Telegram
+
+La agenda vive en **Neon (Postgres)**; Google Sheets recibe solo una copia de respaldo. Las tablas están en `sql/01_crear_tablas.sql` (`horario`, `no_atiende`, `citas`). En `n8n/` están los 3 flujos, listos para importar:
+
+| Flujo | Rutas / disparador | Para qué |
+|---|---|---|
+| `1_CITAS_PACIENTE` | `POST /agendar-cita`, `GET /disponibilidad` | Guarda la cita con candado contra cruces (409 si la hora se ocupó) y calcula las horas libres de la semana. |
+| `2_PANEL_ASISTENTE` | `GET/POST /horario`, `GET /citas`, `POST /cancelar-cita` | Horario de la doctora, lista de citas y cancelación desde el panel. |
+| `3_TELEGRAM` | Bot de Telegram + todos los días 8:00 a. m. | Confirmar, cambiar la fecha (una sola vez) o cancelar con botones, y recordatorio 3 días antes. |
+
+Variables de la app (en `.env` o en Vercel): `VITE_API_BASE=https://<tu-n8n>/webhook`, `VITE_WEBHOOK_URL=https://<tu-n8n>/webhook/agendar-cita` y `VITE_TELEGRAM_BOT=<usuario del bot sin @>`. Con `VITE_API_BASE`, el panel de la asistente lee y guarda en la base en lugar del navegador.
+
+El bot no puede escribir primero: la paciente lo conecta con el botón «Recibir confirmación por Telegram» de la pantalla final (`t.me/<bot>?start=<ID de la cita>`). En n8n hacen falta tres credenciales: Postgres (Neon), Google Sheets y Telegram.

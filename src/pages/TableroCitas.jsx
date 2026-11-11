@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { cancelarCita, leerCitas } from '../api/agenda.js';
 import { USA_MOCK } from '../api/disponibilidad.js';
 import { CLAVE_RESERVAS, cancelarReserva, recargarReservas, todasLasReservas } from '../data/reservas.store.js';
 import { limpiarCache } from '../hooks/semanas.js';
@@ -60,13 +61,33 @@ function descargarCSV(citas) {
 }
 
 export default function TableroCitas({ onCambio }) {
-  const [citas, setCitas] = useState(todasLasReservas);
+  const [citas, setCitas] = useState(() => (USA_MOCK ? todasLasReservas() : []));
   const [filtro, setFiltro] = useState('proximas');
   const [buscar, setBuscar] = useState('');
   const [aviso, setAviso] = useState('');
+  const [cargando, setCargando] = useState(!USA_MOCK);
+  const [error, setError] = useState('');
+
+  // Con API, las citas vienen de la base de datos; se refrescan cada minuto por si llegan nuevas.
+  const cargar = () =>
+    leerCitas()
+      .then((lista) => {
+        setCitas(lista);
+        setError('');
+      })
+      .catch(() => setError('No se pudieron cargar las citas. Revisa la conexión.'))
+      .finally(() => setCargando(false));
+
+  useEffect(() => {
+    if (USA_MOCK) return undefined;
+    cargar();
+    const t = setInterval(cargar, 60000);
+    return () => clearInterval(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Si una paciente reserva en otra pestaña de este navegador, el tablero se actualiza solo.
   useEffect(() => {
+    if (!USA_MOCK) return undefined;
     const alCambiar = (e) => {
       if (e.key !== CLAVE_RESERVAS) return;
       recargarReservas();
@@ -108,9 +129,27 @@ export default function TableroCitas({ onCambio }) {
     else grupos.push({ fecha: c.fecha, citas: [c] });
   });
 
-  const cancelar = (c) => {
+  // El contador de la pestaña sigue a las citas próximas
+  useEffect(() => {
+    onCambio?.(proximas.length);
+  }, [proximas.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cancelar = async (c) => {
     const quien = c.nombre || 'esta reserva';
     if (!window.confirm(`¿Cancelar la cita de ${quien} el ${fechaLarga(c.fecha).toLowerCase()} a las ${hora12(c.hora)}?\n\nLa hora vuelve a quedar libre para otras pacientes.`)) return;
+    if (!USA_MOCK) {
+      try {
+        await cancelarCita(c.id);
+      } catch {
+        setAviso('');
+        setError('No se pudo cancelar. Revisa la conexión e inténtalo otra vez.');
+        return;
+      }
+      limpiarCache();
+      await cargar();
+      setAviso(`Se canceló la cita de ${quien}. Esa hora ya está libre otra vez.`);
+      return;
+    }
     cancelarReserva(c.id);
     limpiarCache();
     setCitas(todasLasReservas());
@@ -174,8 +213,11 @@ export default function TableroCitas({ onCambio }) {
       </div>
 
       {aviso && <p className="guardado ok tablero-aviso" role="status">✓ {aviso}</p>}
+      {error && <p className="guardado error tablero-aviso" role="alert">{error}</p>}
 
-      {!grupos.length ? (
+      {cargando ? (
+        <div className="tablero-vacio" role="status"><p className="estado-titulo">Cargando citas…</p></div>
+      ) : !grupos.length ? (
         <div className="tablero-vacio">
           <span className="tablero-vacio-ico"><Icono d={I.vacio} size={34} /></span>
           <p className="estado-titulo">{buscar ? 'Ninguna cita coincide con la búsqueda' : 'No hay citas en esta vista'}</p>
@@ -216,7 +258,8 @@ export default function TableroCitas({ onCambio }) {
                         </div>
                         {c.notas && <p className="cita-notas"><Icono d={I.nota} size={15} />{c.notas}</p>}
                         <div className="cita-pie">
-                          <span className={`etq-estado${yaPaso ? ' pasada' : ''}`}>{yaPaso ? 'Ya pasó' : 'Confirmada'}</span>
+                          <span className={`etq-estado${yaPaso ? ' pasada' : ''}`}>{yaPaso ? 'Ya pasó' : (c.estado || 'Confirmada')}</span>
+                          {c.telegram && !yaPaso && <span className="etq-estado">Telegram ✓</span>}
                           <span className="cita-botones">
                             {tel && <a className="boton-redondo" href={`tel:+57${tel}`} aria-label={`Llamar a ${c.nombre}`} title="Llamar"><Icono d={I.tel} /></a>}
                             {tel && <a className="boton-redondo wa" href={`https://wa.me/57${tel}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${c.nombre}`} title="WhatsApp"><Icono d={I.wa} /></a>}

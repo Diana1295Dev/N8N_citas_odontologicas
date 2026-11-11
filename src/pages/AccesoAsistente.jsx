@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { USA_MOCK } from '../api/disponibilidad.js';
 import { todasLasReservas } from '../data/reservas.store.js';
 import { ahoraBogota, horaAMin } from '../lib/fechas.js';
 import { bloqueoRestante, cerrarSesion, DEMO, haySesion, ingresar, USUARIO } from '../lib/sesion.js';
@@ -122,12 +123,13 @@ export default function AccesoAsistente() {
   const [dentro, setDentro] = useState(() => haySesion());
   const [pestana, setPestana] = useState('citas');
   const [, setVersion] = useState(0); // fuerza a recalcular el contador cuando el tablero cambia
+  const [proximasApi, setProximasApi] = useState(0); // con API, el tablero informa cuántas hay
   if (!dentro) return <Ingreso onEntrar={() => setDentro(true)} />;
   const salir = () => {
     cerrarSesion();
     setDentro(false);
   };
-  const proximas = contarProximas();
+  const proximas = USA_MOCK ? contarProximas() : proximasApi;
   return (
     <main className="contenedor">
       <div className="panel-barra">
@@ -158,7 +160,9 @@ export default function AccesoAsistente() {
         </div>
       </div>
       <div id="panel-asistente" role="tabpanel" aria-labelledby={`tab-${pestana}`}>
-        {pestana === 'citas' ? <TableroCitas onCambio={() => setVersion((v) => v + 1)} /> : <Asistente />}
+        {pestana === 'citas' ? (
+          <TableroCitas onCambio={(n) => (USA_MOCK ? setVersion((v) => v + 1) : setProximasApi(n))} />
+        ) : <Asistente />}
       </div>
     </main>
   );

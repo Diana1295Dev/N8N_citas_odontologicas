@@ -1,6 +1,6 @@
 import { getDisponibilidadMock } from '../data/disponibilidad.mock.js';
 
-const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
+export const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
 
 /** true cuando no hay API configurada y se muestran datos de ejemplo. */
 export const USA_MOCK = !API_BASE;

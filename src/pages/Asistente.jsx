@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { guardarHorario, leerCitas, leerHorario } from '../api/agenda.js';
 import { USA_MOCK } from '../api/disponibilidad.js';
 import { PROFESIONAL } from '../config.js';
 import { ocupacionDe } from '../data/disponibilidad.mock.js';
 import { guardarAgenda, horarioPersonalizado, restablecerAgenda } from '../data/horario.store.js';
 import { limpiarCache } from '../hooks/semanas.js';
 import {
-  alternarDia as alternarNoAtiende, alternarSemana, componerAgenda, componerMarcas, diasDeSemana, errorPatron, MARCAS_VACIAS, noAtiende, PATRON_VACIO,
+  alternarDia as alternarNoAtiende, alternarSemana, componerAgenda, componerMarcas, diasDeSemana, errorPatron, MARCAS_VACIAS, noAtiende, PATRON_VACIO, periodosDe,
 } from '../lib/agenda.js';
 import {
   addDays, ahoraBogota, capitalizar, fechaLarga, formatRango, hora12, indiceDia, lunesDe, MESES, minAHora, parseISO, rangoSemanas, toISO,
 } from '../lib/fechas.js';
+import { BLOQUE_MIN } from '../config.js';
 
 const CLAVE_UI = 'citas.agenda.ui.v1';
 const NOMBRES_DIA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -57,7 +59,28 @@ export default function Asistente() {
   const [marcas, setMarcas] = useState(inicial.marcas);
   const [mes, setMes] = useState(mesDe(hoy));
   const [estado, setEstado] = useState({ tipo: 'vacio', texto: '' });
+  const [citasApi, setCitasApi] = useState([]);
   const celdas = useRef({});
+  const ultimoEnvio = useRef(0);
+
+  // Con API, el horario y las citas vienen de la base de datos.
+  useEffect(() => {
+    if (USA_MOCK) return;
+    setEstado({ tipo: 'vacio', texto: 'Cargando la agenda…' });
+    Promise.all([leerHorario(), leerCitas()])
+      .then(([h, citas]) => {
+        setPatron(h.patron);
+        setMarcas(h.marcas);
+        setCitasApi(citas);
+        setEstado({ tipo: 'vacio', texto: '' });
+      })
+      .catch(() => setEstado({ tipo: 'error', texto: 'No se pudo cargar la agenda. Revisa la conexión y recarga la página.' }));
+  }, []);
+
+  const textoGuardado = (p) => ({
+    tipo: p.dias.length ? 'ok' : 'aviso',
+    texto: p.dias.length ? 'Guardado. Las pacientes ya ven esta agenda.' : 'Guardado, pero no hay días marcados: las pacientes no verán horarios.',
+  });
 
   // Cada cambio se guarda solo: así no hay un botón que recordar.
   const aplicar = (nuevoPatron, nuevasMarcas) => {
@@ -66,6 +89,14 @@ export default function Asistente() {
     const err = errorPatron(nuevoPatron);
     if (err) {
       setEstado({ tipo: 'error', texto: `${err} Aún no se guardó.` });
+      return;
+    }
+    if (!USA_MOCK) {
+      const envio = ++ultimoEnvio.current;
+      setEstado({ tipo: 'vacio', texto: 'Guardando…' });
+      guardarHorario(nuevoPatron, nuevasMarcas)
+        .then(() => envio === ultimoEnvio.current && setEstado(textoGuardado(nuevoPatron)))
+        .catch(() => envio === ultimoEnvio.current && setEstado({ tipo: 'error', texto: 'No se pudo guardar. Revisa la conexión e inténtalo otra vez.' }));
       return;
     }
     guardarAgenda(
@@ -78,12 +109,16 @@ export default function Asistente() {
       /* sin almacenamiento */
     }
     limpiarCache(); // la paciente debe ver la agenda nueva de inmediato
-    setEstado({
-      tipo: nuevoPatron.dias.length ? 'ok' : 'aviso',
-      texto: nuevoPatron.dias.length
-        ? 'Guardado. Las pacientes ya ven esta agenda.'
-        : 'Guardado, pero no hay días marcados: las pacientes no verán horarios.',
-    });
+    setEstado(textoGuardado(nuevoPatron));
+  };
+
+  // Citas del día y si ya no cabe ni un bloque más
+  const ocupacion = (f) => {
+    if (USA_MOCK) return ocupacionDe(f);
+    const delDia = citasApi.filter((c) => c.fecha === f);
+    const bloques = periodosDe(patron).reduce((n, [a, b]) => n + Math.floor((b - a) / BLOQUE_MIN), 0);
+    const ocupados = delDia.reduce((n, c) => n + Math.ceil(c.duracion_min / BLOQUE_MIN), 0);
+    return { citas: delDia.length, lleno: bloques > 0 && ocupados >= bloques };
   };
 
   const alternarDia = (i) =>
@@ -213,7 +248,7 @@ export default function Asistente() {
             const f = c.dia;
             const atiende = atiendeEseDia(f);
             const cerrado = atiende && noAtiende(marcas, f);
-            const ocup = atiende && !cerrado ? ocupacionDe(f) : null;
+            const ocup = atiende && !cerrado ? ocupacion(f) : null;
             const lleno = Boolean(ocup?.lleno);
             const citas = ocup?.citas || 0;
             const estadoTxt = cerrado ? 'no atiende' : lleno ? 'sin cupo, las pacientes llenaron el día' : citas ? `disponible, ${citas} cita${citas === 1 ? '' : 's'} reservada${citas === 1 ? '' : 's'}` : 'disponible';
@@ -250,7 +285,7 @@ export default function Asistente() {
       </div>
       <p className="ver-paciente">
         <a className="enlace" href="#/paciente">Ver cómo la ve la paciente →</a>
-        <button type="button" className="enlace" onClick={empezarDeNuevo}>Empezar de nuevo</button>
+        {USA_MOCK && <button type="button" className="enlace" onClick={empezarDeNuevo}>Empezar de nuevo</button>}
       </p>
     </section>
   );

@@ -26,7 +26,10 @@ async function enviarMock(payload) {
   registrarCita(payload);
 }
 
-/** POST a VITE_WEBHOOK_URL. El servidor indica una hora ocupada con HTTP 409 o { error: "slot_taken" }. */
+/**
+ * POST a VITE_WEBHOOK_URL. El servidor indica una hora ocupada con HTTP 409 o { error: "slot_taken" }.
+ * Devuelve la respuesta del servidor ({ ok, id, ... }); el id sirve para conectar la cita con Telegram.
+ */
 export async function enviarCita(payload) {
   if (!WEBHOOK_URL) return enviarMock(payload);
 
@@ -57,4 +60,5 @@ export async function enviarCita(payload) {
   // Mientras la disponibilidad salga del mock, la cita aceptada también se aparta aquí para que su hora deje de ofrecerse.
   // Con VITE_API_BASE, la API ya descuenta sus citas.
   if (USA_MOCK) registrarCita(payload);
+  return cuerpo || {};
 }

@@ -1,0 +1,499 @@
+{
+  "name": "2_PANEL_ASISTENTE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "horario",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2c3d4e5-0105-4000-8000-000000000000",
+      "name": "GET horario",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "horario-get"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  (select row_to_json(h) from horario h where id = 1) as horario,\n  coalesce((select json_agg(to_char(fecha, 'YYYY-MM-DD') order by fecha) from no_atiende where fecha >= current_date - 7), '[]'::json) as no_atiende,\n  coalesce((select json_agg(json_build_object('fecha', to_char(fecha, 'YYYY-MM-DD'), 'hora', to_char(hora, 'HH24:MI'), 'dur', duracion_min))\n            from citas where estado <> 'Cancelada' and fecha >= current_date - 1), '[]'::json) as citas;",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0106-4000-8000-000000000000",
+      "name": "Leer horario",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte la fila de la base al formato del panel de la asistente\nconst r = $input.first().json;\nconst h = r.horario;\nreturn [{ json: {\n  patron: {\n    dias: h.dias || [],\n    manana: { on: h.manana_on, ini: h.manana_ini, fin: h.manana_fin },\n    tarde: { on: h.tarde_on, ini: h.tarde_ini, fin: h.tarde_fin },\n  },\n  marcas: { no_atiende: r.no_atiende || [] },\n  actualizado_en: h.actualizado_en,\n} }];"
+      },
+      "id": "b2c3d4e5-0107-4000-8000-000000000000",
+      "name": "Armar horario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-0108-4000-8000-000000000000",
+      "name": "Responder horario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "horario",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2c3d4e5-0109-4000-8000-000000000000",
+      "name": "POST horario",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        460
+      ],
+      "webhookId": "horario-post"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Valida lo que envía el panel y arma el SQL para guardarlo\nconst lit = (v) => (v === null || v === undefined) ? 'null' : \"'\" + String(v).replace(/'/g, \"''\") + \"'\";\nconst num = (v) => { const x = Number(v); if (!Number.isFinite(x)) throw new Error('número inválido'); return String(Math.round(x)); };\nconst b = $('POST horario').first().json.body || {};\nconst p = b.patron || {};\nconst dias = [...new Set((p.dias || []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 5))].sort();\nconst per = (x) => ({ on: Boolean(x && x.on), ini: Number(x && x.ini), fin: Number(x && x.fin) });\nconst m = per(p.manana);\nconst t = per(p.tarde);\nfor (const x of [m, t]) if (!(x.ini >= 0 && x.fin <= 1440 && x.ini < x.fin)) throw new Error('horario inválido');\nconst fechas = [...new Set(((b.marcas && b.marcas.no_atiende) || []).filter((f) => /^\\d{4}-\\d{2}-\\d{2}$/.test(f)))];\nconst sql = [\n  'begin;',\n  \"update horario set dias = '{\" + dias.join(',') + \"}', manana_on = \" + m.on + ', manana_ini = ' + num(m.ini) + ', manana_fin = ' + num(m.fin)\n    + ', tarde_on = ' + t.on + ', tarde_ini = ' + num(t.ini) + ', tarde_fin = ' + num(t.fin) + ', actualizado_en = now() where id = 1;',\n  'delete from no_atiende where fecha >= current_date - 7;',\n  fechas.length ? 'insert into no_atiende (fecha) values ' + fechas.map((f) => '(' + lit(f) + ')').join(', ') + ' on conflict do nothing;' : '',\n  'commit;',\n  \"select 'ok' as resultado;\",\n].join('\\n');\nreturn [{ json: { sql } }];"
+      },
+      "id": "b2c3d4e5-0110-4000-8000-000000000000",
+      "name": "SQL guardar horario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0111-4000-8000-000000000000",
+      "name": "Guardar horario",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": true\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-0112-4000-8000-000000000000",
+      "name": "Responder guardado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "citas",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2c3d4e5-0113-4000-8000-000000000000",
+      "name": "GET citas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1700
+      ],
+      "webhookId": "citas-get"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select id, to_char(fecha, 'YYYY-MM-DD') as fecha, to_char(hora, 'HH24:MI') as hora, duracion_min, nombre, telefono, email,\n  servicio, servicio_nombre, notas, estado, telegram_chat is not null as telegram, cambios, creada_en\nfrom citas\nwhere fecha >= current_date - 60\norder by fecha, hora;",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0114-4000-8000-000000000000",
+      "name": "Leer citas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        1700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Todas las citas en un solo objeto para la app\nreturn [{ json: { citas: $input.all().map((i) => i.json).filter((c) => c.id) } }];"
+      },
+      "id": "b2c3d4e5-0115-4000-8000-000000000000",
+      "name": "Juntar citas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-0116-4000-8000-000000000000",
+      "name": "Responder citas",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cancelar-cita",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2c3d4e5-0117-4000-8000-000000000000",
+      "name": "POST cancelar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1960
+      ],
+      "webhookId": "cancelar-cita-post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lit = (v) => (v === null || v === undefined) ? 'null' : \"'\" + String(v).replace(/'/g, \"''\") + \"'\";\nconst num = (v) => { const x = Number(v); if (!Number.isFinite(x)) throw new Error('número inválido'); return String(Math.round(x)); };\nconst id = String(($('POST cancelar').first().json.body || {}).id || '');\nif (!/^[A-Za-z0-9-]{4,20}$/.test(id)) throw new Error('id inválido');\nreturn [{ json: { id, sql: \"update citas set estado = 'Cancelada' where id = \" + lit(id) + \" and estado <> 'Cancelada' returning id;\" } }];"
+      },
+      "id": "b2c3d4e5-0118-4000-8000-000000000000",
+      "name": "SQL cancelar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        1960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.sql }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0119-4000-8000-000000000000",
+      "name": "Cancelar en Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        1960
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "vBVjvF7Tiq9epFlO",
+          "name": "Neon citas"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1avL3NOgp41Ql2TNPB7HKBr3HqkOUJvTgkqQtJzdRESk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('SQL cancelar').item.json.id }}",
+            "Estado": "Cancelada"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2c3d4e5-0120-4000-8000-000000000000",
+      "name": "Respaldo: marcar cancelada",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        1960
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zuIapvhelQNY2U9e",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, id: $('SQL cancelar').item.json.id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-0121-4000-8000-000000000000",
+      "name": "Responder cancelada",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1960
+      ]
+    }
+  ],
+  "connections": {
+    "GET horario": {
+      "main": [
+        [
+          {
+            "node": "Leer horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer horario": {
+      "main": [
+        [
+          {
+            "node": "Armar horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar horario": {
+      "main": [
+        [
+          {
+            "node": "Responder horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST horario": {
+      "main": [
+        [
+          {
+            "node": "SQL guardar horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL guardar horario": {
+      "main": [
+        [
+          {
+            "node": "Guardar horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar horario": {
+      "main": [
+        [
+          {
+            "node": "Responder guardado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET citas": {
+      "main": [
+        [
+          {
+            "node": "Leer citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer citas": {
+      "main": [
+        [
+          {
+            "node": "Juntar citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Juntar citas": {
+      "main": [
+        [
+          {
+            "node": "Responder citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST cancelar": {
+      "main": [
+        [
+          {
+            "node": "SQL cancelar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL cancelar": {
+      "main": [
+        [
+          {
+            "node": "Cancelar en Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancelar en Neon": {
+      "main": [
+        [
+          {
+            "node": "Respaldo: marcar cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respaldo: marcar cancelada": {
+      "main": [
+        [
+          {
+            "node": "Responder cancelada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota"
+  },
+  "pinData": {}
+}

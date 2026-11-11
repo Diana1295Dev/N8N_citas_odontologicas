@@ -65,9 +65,10 @@ export default function Paciente() {
   const confirmar = async () => {
     setEnviando(true);
     setErrorEnvio('');
+    let respuesta = null;
     try {
       if (!trampa) {
-        await enviarCita({
+        respuesta = await enviarCita({
           nombre: datos.nombre.trim(),
           telefono: normalizarTelefono(datos.telefono),
           email: datos.email.trim(),
@@ -84,7 +85,7 @@ export default function Paciente() {
           enviado_en: new Date().toISOString(),
         });
       } // con la trampa llena se finge éxito sin enviar nada
-      setExito({ servicio, fecha, hora, email: datos.email.trim() });
+      setExito({ servicio, fecha, hora, email: datos.email.trim(), id: respuesta?.id || null });
       limpiarCache();
     } catch (e) {
       if (e.codigo === 'slot_taken') {
