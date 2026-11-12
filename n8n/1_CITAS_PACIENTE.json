@@ -709,6 +709,33 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Limpiar datos').first().json.email }}",
+        "subject": "=✅ Tu cita quedó reservada · {{ DateTime.fromISO($('Limpiar datos').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL\") }}, {{ DateTime.fromFormat($('Limpiar datos').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }}",
+        "emailType": "html",
+        "message": "=<!doctype html><html><body style=\"margin:0;padding:0;background:#eef6f8;font-family:Arial,Helvetica,sans-serif\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#eef6f8;padding:24px 12px\"><tr><td align=\"center\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(16,38,58,.10)\">\n  <tr><td style=\"background:linear-gradient(160deg,#45d0d3,#1fa6d8 55%,#1f5fc4);background-color:#1fa6d8;padding:30px 28px;text-align:center;color:#ffffff\">\n    <div style=\"font-size:44px;line-height:1\">🦷</div>\n    <div style=\"margin-top:8px;font-size:13px;letter-spacing:3px;font-weight:bold;opacity:.95\">NOMBRE DEL CONSULTORIO · ORTODONCIA TUNJA</div>\n    <div style=\"margin-top:14px;font-size:26px;font-weight:bold\">¡Tu cita quedó reservada!</div>\n  </td></tr>\n  <tr><td style=\"padding:26px 28px 6px;color:#10263a;font-size:16px;line-height:1.55\">\n    Hola, <b>{{ $('Limpiar datos').first().json.nombre.split(' ')[0] }}</b> 👋<br>Gracias por agendar con nosotros. Estos son los datos de tu cita:\n  </td></tr>\n  <tr><td style=\"padding:6px 28px 4px\">\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">🗓</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Fecha</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">{{ DateTime.fromISO($('Limpiar datos').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL 'de' yyyy\").slice(0, 1).toUpperCase() + DateTime.fromISO($('Limpiar datos').first().json.fecha).setLocale('es').toFormat(\"cccc d 'de' LLLL 'de' yyyy\").slice(1) }}</td></tr>\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">🕗</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Hora</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">{{ DateTime.fromFormat($('Limpiar datos').first().json.hora, 'HH:mm').setLocale('es').toFormat('h:mm a') }} · {{ $('Limpiar datos').first().json.duracion_min }} min</td></tr>\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">✨</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Servicio</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">{{ $('Limpiar datos').first().json.servicio_nombre }}</td></tr>\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">👩‍⚕️</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Profesional</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">{{ $('Limpiar datos').first().json.profesional }}</td></tr>\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">📍</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Lugar</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">Tunja, Boyacá</td></tr>\n      <tr><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;width:38px;font-size:20px\">🔖</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#5b6f7f;font-size:14px;width:120px\">Código</td><td style=\"padding:10px 0;border-bottom:1px solid #e3eef0;color:#10263a;font-size:15px;font-weight:600\">{{ $('Limpiar datos').first().json.id }}</td></tr>\n    </table>\n  </td></tr>\n  <tr><td style=\"padding:22px 28px 6px\">\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#e9f6fc;border-radius:16px\"><tr><td style=\"padding:18px 20px;color:#10263a;font-size:15px;line-height:1.5\">\n      <b>📲 Recibe tus avisos por Telegram</b><br>\n      Confirma, cambia la fecha (una vez) o cancela con un toque, y te recordamos tu cita 3 días antes.\n      <div style=\"margin-top:14px\"><a href=\"https://t.me/CitasOrtodonciaTunjaBot?start={{ $('Limpiar datos').first().json.id }}\" style=\"display:inline-block;background:#2aa3e0;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 22px;border-radius:999px\">Abrir en Telegram</a></div>\n    </td></tr></table>\n  </td></tr>\n  <tr><td style=\"padding:18px 28px 26px;color:#5b6f7f;font-size:14px;line-height:1.55\">\n    Te recomendamos llegar <b>10 minutos antes</b>. Si necesitas cambiar o cancelar tu cita, hazlo por Telegram o escríbenos.<br><br>\n    ¡Te esperamos! 💙<br><b style=\"color:#10263a\">Nombre del consultorio</b>\n  </td></tr>\n  <tr><td style=\"background:#f4f8f9;padding:14px 28px;text-align:center;color:#8a9aa6;font-size:12px\">\n    Recibes este correo porque agendaste una cita en línea.\n  </td></tr>\n</table></td></tr></table></body></html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Nombre del consultorio"
+        }
+      },
+      "id": "d4e5f6a7-0304-4000-8000-000000000000",
+      "name": "Enviar correo de confirmación",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2520,
+        400
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xpzSXjcvOkRs1xTs",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -775,6 +802,11 @@
         [
           {
             "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enviar correo de confirmación",
             "type": "main",
             "index": 0
           }
