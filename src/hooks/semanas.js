@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDisponibilidad } from '../api/disponibilidad.js';
+import { getDisponibilidad, USA_MOCK } from '../api/disponibilidad.js';
 import { addDays } from '../lib/fechas.js';
 
 // Caché en memoria por servicio y semana, con deduplicación de peticiones en curso.
@@ -44,16 +44,30 @@ export function useSemana(servicio, semana) {
     let vivo = true;
     const reintento = forzar.key === key && forzar.n > 0;
     const enCache = reintento ? null : leerCache(servicio, semana);
+    // Con la API real, otras pacientes pueden reservar mientras esta mira: se muestra lo guardado
+    // y se vuelve a preguntar en silencio, también al regresar a la página.
+    const refrescar = () => {
+      if (USA_MOCK) return;
+      cargarSemana(servicio, semana, { forzar: true })
+        .then((data) => vivo && setRes({ key, status: 'ok', data }))
+        .catch(() => { /* se queda con lo que ya mostraba */ });
+    };
+    const alVolver = () => { if (document.visibilityState === 'visible') refrescar(); };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', refrescar);
     if (enCache) {
       setRes({ key, status: 'ok', data: enCache });
-      return undefined;
+      refrescar();
+    } else {
+      setRes({ key, status: 'loading' });
+      cargarSemana(servicio, semana, { forzar: reintento })
+        .then((data) => vivo && setRes({ key, status: 'ok', data }))
+        .catch(() => vivo && setRes({ key, status: 'error' }));
     }
-    setRes({ key, status: 'loading' });
-    cargarSemana(servicio, semana, { forzar: reintento })
-      .then((data) => vivo && setRes({ key, status: 'ok', data }))
-      .catch(() => vivo && setRes({ key, status: 'error' }));
     return () => {
       vivo = false;
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('focus', refrescar);
     };
   }, [key, forzar]); // eslint-disable-line react-hooks/exhaustive-deps
 

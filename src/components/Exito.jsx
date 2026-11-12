@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { DIRECCION, PROFESIONAL, TELEGRAM_BOT } from '../config.js';
 import { fechaLarga, hora12 } from '../lib/fechas.js';
 import { descargarICS } from '../lib/ics.js';
+import ComoLlega from './ComoLlega.jsx';
 
 const CONFETI = Array.from({ length: 14 }, (_, i) => i);
-const ESPERA_TELEGRAM_S = 4; // segundos antes de abrir Telegram solo
+const ESPERA_TELEGRAM_S = 10; // segundos antes de abrir Telegram solo (alcanza a leer la pantalla)
 
 export default function Exito({ cita, onNueva }) {
   const titulo = useRef(null);
@@ -48,7 +49,6 @@ export default function Exito({ cita, onNueva }) {
         {fechaLarga(cita.fecha)} a las {hora12(cita.hora)} · {cita.servicio.nombre}<br />
         Te enviamos la confirmación a <b>{cita.email}</b>.
       </p>
-      <p className="nota-correo">📬 ¿No te llegó? Espera un par de minutos y revisa <b>Spam</b> o <b>Promociones</b>.</p>
       {enlaceTelegram && cita.telegram && (
         <p className="telegram-caja" role="status">
           <span className="telegram-ico" aria-hidden="true">✓</span>
@@ -72,6 +72,7 @@ export default function Exito({ cita, onNueva }) {
       {abrirSolo && faltan !== null && faltan > 0 && (
         <button type="button" className="enlace" onClick={() => setFaltan(null)}>No, gracias</button>
       )}
+      <ComoLlega email={cita.email} enviado telegramListo={Boolean(cita.telegram)} />
       <div className="acciones centrado">
         <button type="button" className="btn primario" onClick={agregar}>Agregar al calendario (.ics)</button>
         <button type="button" className="btn fantasma" onClick={onNueva}>Agendar otra cita</button>

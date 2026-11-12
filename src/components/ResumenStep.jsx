@@ -1,5 +1,6 @@
 import { PROFESIONAL } from '../config.js';
 import { fechaLarga, hora12 } from '../lib/fechas.js';
+import ComoLlega from './ComoLlega.jsx';
 
 export default function ResumenStep({ servicio, fecha, hora, datos, enviando, errorEnvio, onAtras, onConfirmar }) {
   const filas = [
@@ -20,24 +21,7 @@ export default function ResumenStep({ servicio, fecha, hora, datos, enviando, er
           <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
         ))}
       </dl>
-      <section className="como-llega" aria-labelledby="t-como-llega">
-        <h3 id="t-como-llega">¿Cómo te va a llegar la confirmación?</h3>
-        <p className="como-llega-intro">Apenas toques <b>Confirmar cita</b>, te avisamos por dos lados:</p>
-        <ol>
-          <li>
-            <span className="como-llega-ico" aria-hidden="true">📧</span>
-            <span><b>A tu correo.</b> Te escribimos a <b>{datos.email}</b> con todos los datos de tu cita.</span>
-          </li>
-          <li>
-            <span className="como-llega-ico" aria-hidden="true">📲</span>
-            <span><b>A tu Telegram.</b> Se abre solito; solo toca <b>INICIAR</b> y listo. Por ahí también te recordamos tu cita 3 días antes.</span>
-          </li>
-          <li>
-            <span className="como-llega-ico" aria-hidden="true">🔎</span>
-            <span><b>¿No ves el correo?</b> Dale un par de minutos y revisa tu carpeta de <b>Spam</b> o <b>Promociones</b>. Si está ahí, márcalo como «No es spam» y los próximos te llegarán directo.</span>
-          </li>
-        </ol>
-      </section>
+      <ComoLlega email={datos.email} />
       {errorEnvio && <p className="alerta" role="alert">{errorEnvio}</p>}
       <div className="acciones">
         <button type="button" className="btn fantasma" onClick={onAtras} disabled={enviando}>Atrás</button>
