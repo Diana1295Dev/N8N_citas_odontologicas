@@ -43,11 +43,12 @@ export default function Exito({ cita, onNueva }) {
           <path className="exito-check" d="M20 33l8 8 17-18" fill="none" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <h2 tabIndex={-1} ref={titulo} className="paso-titulo">¡Tu cita quedó solicitada!</h2>
+      <h2 tabIndex={-1} ref={titulo} className="paso-titulo">¡Tu cita quedó reservada!</h2>
       <p className="paso-sub">
         {fechaLarga(cita.fecha)} a las {hora12(cita.hora)} · {cita.servicio.nombre}<br />
-        Te escribiremos a {cita.email} para confirmarla.
+        Te enviamos la confirmación a <b>{cita.email}</b>.
       </p>
+      <p className="nota-correo">📬 ¿No te llegó? Espera un par de minutos y revisa <b>Spam</b> o <b>Promociones</b>.</p>
       {enlaceTelegram && cita.telegram && (
         <p className="telegram-caja" role="status">
           <span className="telegram-ico" aria-hidden="true">✓</span>
