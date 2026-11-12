@@ -22,7 +22,7 @@ export default function ComoLlega({ enviado = false, telegramListo = false }) {
         <span className="como-llega-cab-ico"><Icono d={I.campana} /></span>
         <div>
           <h3 id="t-como-llega">{enviado ? 'Así te llega tu confirmación' : '¿Cómo te llega la confirmación?'}</h3>
-          <p>{enviado ? 'Te avisamos por dos canales.' : <>Apenas toques <b>Confirmar cita</b>, te avisamos por dos canales.</>}</p>
+          <p>{enviado ? 'Te avisamos por los dos medios.' : <>Apenas toques <b>Confirmar cita</b>, te avisamos por los dos medios.</>}</p>
         </div>
       </header>
       <ul className="como-llega-lista">
