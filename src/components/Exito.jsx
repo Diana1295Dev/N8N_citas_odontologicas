@@ -49,6 +49,7 @@ export default function Exito({ cita, onNueva }) {
         {fechaLarga(cita.fecha)} a las {hora12(cita.hora)} · {cita.servicio.nombre}<br />
         Te enviamos la confirmación a <b>{cita.email}</b>.
       </p>
+      <ComoLlega email={cita.email} enviado telegramListo={Boolean(cita.telegram)} />
       {enlaceTelegram && cita.telegram && (
         <p className="telegram-caja" role="status">
           <span className="telegram-ico" aria-hidden="true">✓</span>
@@ -72,7 +73,6 @@ export default function Exito({ cita, onNueva }) {
       {abrirSolo && faltan !== null && faltan > 0 && (
         <button type="button" className="enlace" onClick={() => setFaltan(null)}>No, gracias</button>
       )}
-      <ComoLlega email={cita.email} enviado telegramListo={Boolean(cita.telegram)} />
       <div className="acciones centrado">
         <button type="button" className="btn primario" onClick={agregar}>Agregar al calendario (.ics)</button>
         <button type="button" className="btn fantasma" onClick={onNueva}>Agendar otra cita</button>
