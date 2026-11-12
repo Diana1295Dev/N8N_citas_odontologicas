@@ -3,6 +3,8 @@ export const OFFSET_BOGOTA_H = 5; // Bogotá es UTC-5 todo el año (sin horario 
 
 export const PROFESIONAL = 'Nombre de la profesional en ortodoncia';
 export const CLINICA = 'Nombre del consultorio';
+// Correo desde el que se envían las confirmaciones (se muestra a la paciente para que lo busque si cae en spam)
+export const CORREO_CONSULTORIO = 'nombreconsultorio@gmail.com';
 // Bot de Telegram para confirmar, recordar y cambiar citas (usuario sin @). Vacío = no se muestra el botón.
 export const TELEGRAM_BOT = (import.meta.env?.VITE_TELEGRAM_BOT || '').replace(/^@/, '');
 export const DIRECCION = 'Tunja, Boyacá'; // poner aquí la dirección exacta del consultorio

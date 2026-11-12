@@ -1834,25 +1834,27 @@ a { color: inherit; text-decoration: none; }
 .telegram-ico { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; background: #229ed9; color: #fff; }
 
 /* ---------- Cómo llega la confirmación (revisar y pantalla final) ---------- */
-.como-llega {
-  position: relative; margin-top: 22px; padding: 22px 18px 18px; border-radius: 24px; color: #fff;
-  background: radial-gradient(circle at 92% 0%, rgba(255,255,255,.16) 0 70px, transparent 71px), linear-gradient(155deg, #23a9b4 0%, #1683bd 50%, #1a4ea6 100%);
-  box-shadow: 0 22px 40px -22px rgba(31, 95, 196, .75); animation: llega-entra .7s cubic-bezier(.34, 1.56, .64, 1) both;
-}
-@keyframes llega-entra { from { opacity: 0; transform: translateY(18px) scale(.97); } }
-.como-llega h3 { margin: 0; font-family: var(--fuente-titulo); font-size: 1.4rem; line-height: 1.2; color: #fff; display: flex; align-items: center; gap: 10px; }
-.como-llega h3::before { content: '📬'; display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.25); font-size: 1.3rem; animation: llega-salta 2.4s ease-in-out infinite; }
-@keyframes llega-salta { 0%, 70%, 100% { transform: none; } 80% { transform: translateY(-5px) rotate(-8deg); } 90% { transform: translateY(0) rotate(4deg); } }
-.como-llega-intro { margin: 10px 0 0; color: rgba(255,255,255,.95); font-size: 1rem; }
-.como-llega-intro b { color: #fff; }
-.como-llega ol { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; counter-reset: paso; }
-.como-llega li { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 16px; background: #fff; color: var(--tinta-2); font-size: .97rem; line-height: 1.5; box-shadow: 0 8px 18px -12px rgba(10, 40, 90, .5); }
-.como-llega li b { color: var(--tinta); }
-.como-llega-ico { display: grid; place-items: center; flex: none; width: 46px; height: 46px; border-radius: 50%; font-size: 1.35rem; background: linear-gradient(140deg, #dff7f5, #d8ecfb); box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px #bfe3f0; }
-.como-llega li:nth-child(2) .como-llega-ico { background: linear-gradient(140deg, #d9f0fc, #c5e4fa); }
-.como-llega li:last-child { background: #fff4c2; border: 2px solid #f5c542; color: #5c4400; }
-.como-llega li:last-child b { color: #3d2d00; }
-.como-llega li:last-child .como-llega-ico { background: #ffd95a; box-shadow: inset 0 0 0 2px #fff4c2, 0 0 0 2px #f5c542; animation: llega-salta 2.4s ease-in-out .8s infinite; }
-.como-llega li > span:last-child { overflow-wrap: anywhere; }
+.como-llega { margin-top: 22px; border: 1px solid #d5e2e6; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(16, 38, 58, .05), 0 12px 28px -18px rgba(16, 38, 58, .35); animation: llega-entra .5s var(--ease) both; }
+@keyframes llega-entra { from { opacity: 0; transform: translateY(10px); } }
+.como-llega-cab { display: flex; gap: 12px; align-items: center; padding: 16px 18px; background: linear-gradient(135deg, #10263a, #17405e); color: #fff; }
+.como-llega-cab-ico { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 255, 255, .12); color: #7fe0d4; }
+.como-llega-cab h3 { margin: 0; font-family: var(--fuente); font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
+.como-llega-cab p { margin: 2px 0 0; font-size: .88rem; color: #c3d4dd; }
+.como-llega-cab p b { color: #fff; font-weight: 600; }
+.como-llega-lista { list-style: none; margin: 0; padding: 4px 18px; }
+.como-llega-lista li { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid #e7eef0; color: var(--tinta-2); font-size: .92rem; line-height: 1.5; }
+.como-llega-lista li:last-child { border-bottom: 0; }
+.como-llega strong { display: block; margin-bottom: 1px; color: var(--tinta); font-size: .95rem; }
+.como-llega b { color: var(--tinta); font-weight: 600; }
+.como-llega-ico { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; }
+.como-llega-ico.correo { background: #e6f4f2; color: var(--aqua-osc); }
+.como-llega-ico.telegram { background: #e6f2fa; color: #1d8ac4; }
+.como-llega-ico.atencion { background: #fdefd0; color: #a86b00; }
+.como-llega-nota { display: flex; gap: 14px; align-items: flex-start; margin: 0; padding: 14px 18px; background: #fffaf0; border-top: 1px solid #f1e3c2; box-shadow: inset 4px 0 0 #e0a100; color: #5f4a1c; font-size: .9rem; line-height: 1.5; }
+.como-llega-nota strong { color: #4a3300; }
+.como-llega-nota b { color: #4a3300; }
+.correo-chip { padding: 1px 6px; border-radius: 6px; background: #eef3f5; overflow-wrap: normal; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.como-llega-nota .correo-chip { background: #fbe9bf; }
+.como-llega li > span:last-child, .como-llega-nota > span:last-child { min-width: 0; }
 .exito .como-llega { text-align: left; max-width: 520px; margin: 18px auto 16px; }
-@media (prefers-reduced-motion: reduce) { .como-llega, .como-llega h3::before, .como-llega li:last-child .como-llega-ico { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .como-llega { animation: none; } }

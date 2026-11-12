@@ -49,7 +49,7 @@ export default function Exito({ cita, onNueva }) {
         {fechaLarga(cita.fecha)} a las {hora12(cita.hora)} · {cita.servicio.nombre}<br />
         Te enviamos la confirmación a <b>{cita.email}</b>.
       </p>
-      <ComoLlega email={cita.email} enviado telegramListo={Boolean(cita.telegram)} />
+      <ComoLlega enviado telegramListo={Boolean(cita.telegram)} />
       {enlaceTelegram && cita.telegram && (
         <p className="telegram-caja" role="status">
           <span className="telegram-ico" aria-hidden="true">✓</span>

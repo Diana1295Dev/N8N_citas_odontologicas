@@ -21,7 +21,7 @@ export default function ResumenStep({ servicio, fecha, hora, datos, enviando, er
           <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
         ))}
       </dl>
-      <ComoLlega email={datos.email} />
+      <ComoLlega />
       {errorEnvio && <p className="alerta" role="alert">{errorEnvio}</p>}
       <div className="acciones">
         <button type="button" className="btn fantasma" onClick={onAtras} disabled={enviando}>Atrás</button>
